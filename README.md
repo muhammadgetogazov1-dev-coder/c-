@@ -7,9 +7,9 @@
 Межинститутская базовая кафедра 
 
 
-Отчет по лабораторной работе № 9
-Вариант 9
-Тема: «Бинарное дерево. Обходы. BST»
+Отчет по лабораторной работе № 10
+Вариант 5
+Тема: «Реализация класса «Динамический массив целых чисел» с конструкторами, деструктором и основными операциями»
 Дисциплина: «Алгоритмы и структуры данных»
 
 
@@ -27,441 +27,431 @@
 
 Ставрополь 2026
 
-Условие     
-Обязательные операции                      Дополнительное задание
-preOrder, inOrder, postOrder,levelOrder  найти сумму всех элементов
 
-2)insert, search, inOrder             Найти предшественника(предыдущий по порядку)
-
-
-Код 
+Код
 #include <iostream>
-#include <queue>
+#include <string>
 #include <vector>
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <ctime>
 using namespace std;
 
-// ==================== УЗЕЛ ====================
-struct Node {
-    int data;
-    Node* left;
-    Node* right;
-    Node(int val) : data(val), left(nullptr), right(nullptr) {}
+// ==================== AVL-ДЕРЕВО ====================
+struct AVLNode {
+    int key, height;
+    AVLNode* left, * right;
+    AVLNode(int k) : key(k), height(1), left(nullptr), right(nullptr) {}
 };
 
-// ==================== ЧАСТЬ 1: БИНАРНОЕ ДЕРЕВО ====================
-class BinaryTree {
-private:
-    Node* root;
+class AVLTree {
+    AVLNode* root;
+    int h(AVLNode* n) { return n ? n->height : 0; }
+    int bf(AVLNode* n) { return n ? h(n->left) - h(n->right) : 0; }
+    void upd(AVLNode* n) { if (n) n->height = 1 + max(h(n->left), h(n->right)); }
 
-    void preOrder(Node* node) {
-        if (!node) return;
-        cout << node->data << " ";
-        preOrder(node->left);
-        preOrder(node->right);
+    AVLNode* rightRotate(AVLNode* y) {
+        AVLNode* x = y->left; y->left = x->right; x->right = y;
+        upd(y); upd(x); return x;
     }
-    void inOrder(Node* node) {
-        if (!node) return;
-        inOrder(node->left);
-        cout << node->data << " ";
-        inOrder(node->right);
+    AVLNode* leftRotate(AVLNode* x) {
+        AVLNode* y = x->right; x->right = y->left; y->left = x;
+        upd(x); upd(y); return y;
     }
-    void postOrder(Node* node) {
-        if (!node) return;
-        postOrder(node->left);
-        postOrder(node->right);
-        cout << node->data << " ";
-    }
-    // Сумма всех элементов (вариант 6)
-    int sum(Node* node) {
-        if (!node) return 0;
-        return node->data + sum(node->left) + sum(node->right);
-    }
-    void destroy(Node* node) {
-        if (!node) return;
-        destroy(node->left);
-        destroy(node->right);
-        delete node;
-    }
-
-public:
-    BinaryTree() : root(nullptr) {}
-    ~BinaryTree() { destroy(root); }
-
-    void buildSample() {
-        root = new Node(10);
-        root->left = new Node(5);
-        root->right = new Node(15);
-        root->left->left = new Node(3);
-        root->left->right = new Node(7);
-        root->right->right = new Node(20);
-        root->left->right->left = new Node(6);
-        root->right->right->left = new Node(18);
-    }
-
-    void preOrder() { cout << "pre-order:  "; preOrder(root);  cout << endl; }
-    void inOrder() { cout << "in-order:   "; inOrder(root);   cout << endl; }
-    void postOrder() { cout << "post-order: "; postOrder(root); cout << endl; }
-
-    void levelOrder() {
-        if (!root) return;
-        cout << "level-order: ";
-        queue<Node*> q;
-        q.push(root);
-        while (!q.empty()) {
-            Node* cur = q.front(); q.pop();
-            cout << cur->data << " ";
-            if (cur->left)  q.push(cur->left);
-            if (cur->right) q.push(cur->right);
+    AVLNode* balance(AVLNode* n) {
+        if (!n) return nullptr;
+        upd(n);
+        int b = bf(n);
+        if (b > 1) {
+            if (bf(n->left) < 0) n->left = leftRotate(n->left);
+            return rightRotate(n);
         }
-        cout << endl;
+        if (b < -1) {
+            if (bf(n->right) > 0) n->right = rightRotate(n->right);
+            return leftRotate(n);
+        }
+        return n;
     }
-
-    int getSum() { return sum(root); }
-};
-
-// ==================== ЧАСТЬ 2: BST ====================
-class BST {
-private:
-    Node* root;
-
-    Node* insert(Node* node, int key) {
-        if (!node) return new Node(key);
-        if (key < node->data)      node->left = insert(node->left, key);
-        else if (key > node->data) node->right = insert(node->right, key);
-        return node;
+    AVLNode* insert(AVLNode* n, int k) {
+        if (!n) return new AVLNode(k);
+        if (k < n->key) n->left = insert(n->left, k);
+        else if (k > n->key) n->right = insert(n->right, k);
+        else return n;
+        return balance(n);
     }
+    AVLNode* findMin(AVLNode* n) { while (n && n->left) n = n->left; return n; }
 
-    Node* search(Node* node, int key) {
-        if (!node || node->data == key) return node;
-        if (key < node->data) return search(node->left, key);
-        return search(node->right, key);
-    }
-
-    Node* findMin(Node* node) {
-        while (node && node->left) node = node->left;
-        return node;
-    }
-    Node* findMax(Node* node) {
-        while (node && node->right) node = node->right;
-        return node;
-    }
-
-    Node* remove(Node* node, int key) {
-        if (!node) return nullptr;
-        if (key < node->data)      node->left = remove(node->left, key);
-        else if (key > node->data) node->right = remove(node->right, key);
+    // УДАЛЕНИЕ (вариант 6: все случаи, в т.ч. два потомка)
+    AVLNode* remove(AVLNode* n, int k) {
+        if (!n) return nullptr;
+        if (k < n->key) n->left = remove(n->left, k);
+        else if (k > n->key) n->right = remove(n->right, k);
         else {
-            // Случай 1: лист
-            if (!node->left && !node->right) { delete node; return nullptr; }
-            // Случай 2: один потомок
-            else if (!node->left) {
-                Node* tmp = node->right; delete node; return tmp;
+            if (!n->left || !n->right) {
+                AVLNode* t = n->left ? n->left : n->right;
+                if (!t) { delete n; return nullptr; }
+                *n = *t; delete t;
             }
-            else if (!node->right) {
-                Node* tmp = node->left; delete node; return tmp;
-            }
-            // Случай 3: два потомка
             else {
-                Node* minNode = findMin(node->right);
-                node->data = minNode->data;
-                node->right = remove(node->right, minNode->data);
+                AVLNode* m = findMin(n->right);
+                n->key = m->key;
+                n->right = remove(n->right, m->key);
             }
         }
-        return node;
+        return balance(n);
     }
-
-    void inOrder(Node* node) {
-        if (!node) return;
-        inOrder(node->left);
-        cout << node->data << " ";
-        inOrder(node->right);
+    bool search(AVLNode* n, int k) {
+        if (!n) return false;
+        if (n->key == k) return true;
+        return k < n->key ? search(n->left, k) : search(n->right, k);
     }
-
-    int height(Node* node) {
-        if (!node) return 0;
-        return 1 + max(height(node->left), height(node->right));
+    void inOrder(AVLNode* n) {
+        if (!n) return;
+        inOrder(n->left); cout << n->key << " "; inOrder(n->right);
     }
-
-    void destroy(Node* node) {
-        if (!node) return;
-        destroy(node->left);
-        destroy(node->right);
-        delete node;
+    void print(AVLNode* n, int lvl = 0) {
+        if (!n) return;
+        print(n->right, lvl + 1);
+        for (int i = 0; i < lvl; i++) cout << "    ";
+        cout << n->key << " (h=" << n->height << ", bf=" << bf(n) << ")\n";
+        print(n->left, lvl + 1);
     }
+    void destroy(AVLNode* n) {
+        if (!n) return;
+        destroy(n->left); destroy(n->right); delete n;
+    }
+public:
+    AVLTree() : root(nullptr) {}
+    ~AVLTree() { destroy(root); }
+    void insert(int k) { root = insert(root, k); }
+    void remove(int k) { root = remove(root, k); }
+    bool search(int k) { return search(root, k); }
+    void print() { inOrder(root); cout << endl; }
+    void printTree() { print(root); }
+};
 
-    // Предшественник (вариант 6): наибольший ключ, меньший заданного
-    Node* predecessor(Node* node, int key) {
-        Node* pred = nullptr;
-        while (node) {
-            if (key > node->data) { pred = node; node = node->right; }
-            else { node = node->left; }
+// ==================== TRIE ====================
+class Trie {
+    struct Node {
+        Node* ch[26];
+        bool end;
+        Node() : end(false) { fill(ch, ch + 26, nullptr); }
+    };
+    Node* root;
+    void destroy(Node* n) {
+        if (!n) return;
+        for (int i = 0; i < 26; i++) destroy(n->ch[i]);
+        delete n;
+    }
+    void collect(Node* n, string cur, vector<string>& res) {
+        if (n->end) res.push_back(cur);
+        for (int i = 0; i < 26; i++)
+            if (n->ch[i]) collect(n->ch[i], cur + char('a' + i), res);
+    }
+public:
+    Trie() : root(new Node()) {}
+    ~Trie() { destroy(root); }
+
+    void insert(const string& w) {
+        Node* c = root;
+        for (char x : w) {
+            int i = x - 'a';
+            if (i < 0 || i >= 26) continue;
+            if (!c->ch[i]) c->ch[i] = new Node();
+            c = c->ch[i];
         }
-        return pred;
+        c->end = true;
     }
+    bool search(const string& w) {
+        Node* c = root;
+        for (char x : w) {
+            int i = x - 'a';
+            if (i < 0 || i >= 26 || !c->ch[i]) return false;
+            c = c->ch[i];
+        }
+        return c->end;
+    }
+    bool startsWith(const string& p) {
+        Node* c = root;
+        for (char x : p) {
+            int i = x - 'a';
+            if (i < 0 || i >= 26 || !c->ch[i]) return false;
+            c = c->ch[i];
+        }
+        return true;
+    }
+    // ДОП. ЗАДАНИЕ варианта 6: самый длинный префикс-слово
+    string longestPrefix(const string& w) {
+        Node* c = root;
+        int last = -1;
+        for (int i = 0; i < (int)w.size(); i++) {
+            int idx = w[i] - 'a';
+            if (idx < 0 || idx >= 26 || !c->ch[idx]) break;
+            c = c->ch[idx];
+            if (c->end) last = i;
+        }
+        return last == -1 ? "" : w.substr(0, last + 1);
+    }
+    vector<string> allWords() {
+        vector<string> r; collect(root, "", r); return r;
+    }
+};
 
+// ==================== BST (для сравнения) ====================
+struct BSTNode {
+    int key; BSTNode* left, * right;
+    BSTNode(int k) : key(k), left(nullptr), right(nullptr) {}
+};
+class BST {
+    BSTNode* root;
+    BSTNode* insert(BSTNode* n, int k) {
+        if (!n) return new BSTNode(k);
+        if (k < n->key) n->left = insert(n->left, k);
+        else if (k > n->key) n->right = insert(n->right, k);
+        return n;
+    }
+    void destroy(BSTNode* n) {
+        if (!n) return;
+        destroy(n->left); destroy(n->right); delete n;
+    }
 public:
     BST() : root(nullptr) {}
     ~BST() { destroy(root); }
-
-    void insert(int key) { root = insert(root, key); }
-    bool search(int key) { return search(root, key) != nullptr; }
-    void remove(int key) { root = remove(root, key); }
-    void print() { inOrder(root); cout << endl; }
-    int getHeight() { return height(root); }
-
-    int getMin() { Node* n = findMin(root); return n ? n->data : -1; }
-    int getMax() { Node* n = findMax(root); return n ? n->data : -1; }
-
-    // Доп. задание варианта 6
-    int getPredecessor(int key) {
-        Node* p = predecessor(root, key);
-        return p ? p->data : -1;
-    }
+    void insert(int k) { root = insert(root, k); }
 };
-
-// ==================== ВИЗУАЛИЗАЦИЯ ====================
-void printTree(Node* root, int space = 0, int indent = 5) {
-    if (!root) return;
-    space += indent;
-    printTree(root->right, space);
-    cout << endl;
-    for (int i = indent; i < space; i++) cout << " ";
-    cout << root->data << "\n";
-    printTree(root->left, space);
-}
 
 // ==================== MAIN ====================
 int main() {
     setlocale(LC_ALL, "Russian");
     srand(time(0));
 
-    cout << "========== ЧАСТЬ 1: БИНАРНОЕ ДЕРЕВО ==========\n";
-    BinaryTree tree;
-    tree.buildSample();
-    tree.preOrder();
-    tree.inOrder();
-    tree.postOrder();
-    tree.levelOrder();
-    cout << "Сумма всех элементов: " << tree.getSum() << endl;
+    // ---------- AVL ----------
+    cout << "===== ЧАСТЬ 1: AVL =====" << endl;
+    AVLTree avl;
+    for (int k : {10, 20, 30, 40, 50, 25, 60, 70, 15, 35}) avl.insert(k);
+    cout << "In-order: "; avl.print();
+    avl.printTree();
+    cout << "Поиск 25: " << (avl.search(25) ? "да" : "нет") << endl;
 
-    cout << "\n========== ЧАСТЬ 2: BST + ПРЕДШЕСТВЕННИК ==========\n";
-    BST bst;
-    int keys[] = { 50, 30, 70, 20, 40, 60, 80 };
-    for (int k : keys) bst.insert(k);
-    cout << "Симметричный обход BST: ";
-    bst.print();
-    cout << "Высота: " << bst.getHeight() << endl;
-    cout << "Поиск 40: " << (bst.search(40) ? "найден" : "не найден") << endl;
-    cout << "Поиск 100: " << (bst.search(100) ? "найден" : "не найден") << endl;
-    cout << "Предшественник для 50: " << bst.getPredecessor(50) << endl;
-    cout << "Предшественник для 30: " << bst.getPredecessor(30) << endl;
-    cout << "Предшественник для 20: " << bst.getPredecessor(20)
-        << " (нет, -1)" << endl;
+    cout << "\nУдаляем 20 (два потомка):" << endl;
+    avl.remove(20);
+    cout << "In-order: "; avl.print();
+    avl.printTree();
 
-    cout << "\n========== ЧАСТЬ 3: СЛУЧАЙНЫЙ BST (N=20) ==========\n";
-    BST randomBST;
-    vector<int> nums;
-    cout << "Случайные числа: ";
-    for (int i = 0; i < 20; i++) {
-        int x = rand() % 100;
-        nums.push_back(x);
-        randomBST.insert(x);
-        cout << x << " ";
+    // ---------- TRIE ----------
+    cout << "\n===== ЧАСТЬ 2: TRIE =====" << endl;
+    Trie trie;
+    for (auto w : { "cat", "car", "cart", "catfish", "dog" }) trie.insert(w);
+
+    cout << "search(cat): " << (trie.search("cat") ? "да" : "нет") << endl;
+    cout << "search(cattle): " << (trie.search("cattle") ? "да" : "нет") << endl;
+    cout << "startsWith(ca): " << (trie.startsWith("ca") ? "да" : "нет") << endl;
+
+    cout << "\nСамый длинный префикс (вариант 6):" << endl;
+    for (auto w : { "cattle", "cartoon", "catfish", "doom", "xyz" })
+        cout << "  \"" << w << "\" -> \"" << trie.longestPrefix(w) << "\"" << endl;
+
+    cout << "\nВсе слова: ";
+    for (auto& w : trie.allWords()) cout << w << " ";
+    cout << endl;
+
+    // ---------- СРАВНЕНИЕ ----------
+    cout << "\n===== ЧАСТЬ 3: BST vs AVL =====" << endl;
+    cout << "N\tТип\t\tBST(мс)\tAVL(мс)" << endl;
+    for (int N : {1000, 5000, 10000}) {
+        vector<int> rnd(N), srt(N);
+        for (int i = 0; i < N; i++) rnd[i] = rand() % (N * 10);
+        for (int i = 0; i < N; i++) srt[i] = i;
+
+        for (int type = 0; type < 2; type++) {
+            auto& data = type == 0 ? rnd : srt;
+            BST bst; AVLTree avl2;
+
+            auto t1 = chrono::high_resolution_clock::now();
+            for (int x : data) bst.insert(x);
+            auto t2 = chrono::high_resolution_clock::now();
+            double bt = chrono::duration<double, milli>(t2 - t1).count();
+
+            t1 = chrono::high_resolution_clock::now();
+            for (int x : data) avl2.insert(x);
+            t2 = chrono::high_resolution_clock::now();
+            double at = chrono::duration<double, milli>(t2 - t1).count();
+
+            cout << N << "\t" << (type ? "Отсортир." : "Случайные")
+                << "\t" << bt << "\t" << at << endl;
+        }
     }
-    cout << "\n\nОтсортированная последовательность (in-order): ";
-    randomBST.print();
-    cout << "Минимум: " << randomBST.getMin() << endl;
-    cout << "Максимум: " << randomBST.getMax() << endl;
-    cout << "Высота: " << randomBST.getHeight() << endl;
-
-    int toDelete;
-    cout << "\nВведите элемент для удаления: ";
-    cin >> toDelete;
-    randomBST.remove(toDelete);
-    cout << "Дерево после удаления " << toDelete << ":\n";
-    randomBST.print();
-    cout << "\nВизуализация:\n";
-    // Для визуализации нужен доступ к корню — добавим геттер или упростим
     return 0;
 }
-
 Вывод
-========== ЧАСТЬ 1: БИНАРНОЕ ДЕРЕВО ==========
-pre-order:  10 5 3 7 6 15 20 18
-in-order:   3 5 6 7 10 15 18 20
-post-order: 3 6 7 5 18 20 15 10
-level-order: 10 5 15 3 7 20 6 18
-Сумма всех элементов: 84
+===== ЧАСТЬ 1: AVL =====
+In-order: 10 15 20 25 30 35 40 50 60 70
+            70 (h=1, bf=0)
+        60 (h=2, bf=-1)
+    50 (h=3, bf=0)
+        40 (h=2, bf=1)
+            35 (h=1, bf=0)
+30 (h=4, bf=0)
+        25 (h=1, bf=0)
+    20 (h=3, bf=1)
+            15 (h=1, bf=0)
+        10 (h=2, bf=-1)
+Поиск 25: да
 
-========== ЧАСТЬ 2: BST + ПРЕДШЕСТВЕННИК ==========
-Симметричный обход BST: 20 30 40 50 60 70 80
-Высота: 3
-Поиск 40: найден
-Поиск 100: не найден
-Предшественник для 50: 40
-Предшественник для 30: 20
-Предшественник для 20: -1 (нет, -1)
+Удаляем 20 (два потомка):
+In-order: 10 15 25 30 35 40 50 60 70
+            70 (h=1, bf=0)
+        60 (h=2, bf=-1)
+    50 (h=3, bf=0)
+        40 (h=2, bf=1)
+            35 (h=1, bf=0)
+30 (h=4, bf=-1)
+        25 (h=1, bf=0)
+    15 (h=2, bf=0)
+        10 (h=1, bf=0)
 
-========== ЧАСТЬ 3: СЛУЧАЙНЫЙ BST (N=20) ==========
-Случайные числа: 21 29 36 89 89 61 62 7 10 33 0 79 34 91 34 18 83 47 69 39
+===== ЧАСТЬ 2: TRIE =====
+search(cat): да
+search(cattle): нет
+startsWith(ca): да
 
-Отсортированная последовательность (in-order): 0 7 10 18 21 29 33 34 36 39 47 61 62 69 79 83 89 91
-Минимум: 0
-Максимум: 91
-Высота: 8
+Самый длинный префикс (вариант 6):
+  "cattle" -> "cat"
+  "cartoon" -> "cart"
+  "catfish" -> "catfish"
+  "doom" -> ""
+  "xyz" -> ""
 
-Контрольные вопросы
-Что такое бинарное дерево? Из каких элементов оно состоит?
 
-Бинарное дерево — это иерархическая структура данных, в которой каждый узел имеет не более двух потомков (левый и правый). Состоит из:
+  Контрольные вопросы
+  2. Что такое AVL-дерево? В чём его отличие от обычного BST?
 
-Узлов (Node) — хранят данные и указатели на левого/правого потомка;
+AVL-дерево — это самобалансирующееся бинарное дерево поиска, в котором для каждого узла выполняется условие: |высота(левое) − высота(правое)| ≤ 1.
 
-Корня (root) — верхний узел, не имеющий родителя;
+Отличие от BST: обычный BST может выродиться в связный список при вставке отсортированных данных (высота O(n), операции O(n)). AVL автоматически балансируется поворотами, гарантируя высоту O(log n) и операции O(log n) даже в худшем случае.
 
-Листьев (leaf) — узлы без потомков;
+3. Что такое фактор баланса? Как он вычисляется?
 
-Внутренних узлов — узлы, имеющие хотя бы одного потомка;
-
-Рёбер — связи между узлами (указатели).
-
-2. В чём отличие бинарного дерева от бинарного дерева поиска (BST)?
-
-В обычном бинарном дереве порядок расположения элементов произвольный. В BST выполняется свойство упорядоченности: для каждого узла все ключи в левом поддереве меньше ключа узла, а все ключи в правом поддереве больше. Благодаря этому в BST возможен быстрый поиск, а in-order обход даёт отсортированную последовательность.
-
-3. Какие существуют виды обхода бинарного дерева? В чём их особенности?
-
-Прямой (pre-order): Корень → Левый → Правый. Используется для копирования дерева, построения префиксного выражения.
-
-Симметричный (in-order): Левый → Корень → Правый. Для BST даёт отсортированную последовательность.
-
-Обратный (post-order): Левый → Правый → Корень. Используется для удаления дерева, вычисления выражений.
-
-Уровневый (level-order): По уровням слева направо, реализуется через очередь. Используется для поиска в ширину.
-
-4. Какой обход даёт отсортированную последовательность для BST?
-
-Симметричный (in-order) обход — посещение «левый → корень → правый» выдаёт элементы в возрастающем порядке.
-
-5. Какова сложность операций поиска, вставки и удаления в BST? От чего она зависит?
-
-В среднем — O(log n), в худшем — O(n). Сложность зависит от высоты дерева. Если дерево сбалансировано, высота ≈ log₂n, и операции быстрые. Если дерево вырождено в список, высота = n, и сложность становится линейной.
-
-6. Что происходит с BST, если вставлять элементы в отсортированном порядке?
-
-Дерево вырождается в связный список (каждый новый узел становится правым или левым потомком предыдущего). Высота становится равной n, и все операции деградируют до O(n). Это главный недостаток обычного BST.
-
-7. Какие три случая нужно рассмотреть при удалении узла из BST?
-
-Узел — лист (нет потомков): просто удаляем узел.
-
-Узел имеет одного потомка: заменяем удаляемый узел его единственным потомком.
-
-Узел имеет двух потомков: находим минимальный элемент в правом поддереве (или максимальный в левом), копируем его значение в удаляемый узел, затем рекурсивно удаляем этот минимальный узел.
-
-8. Как найти наименьший элемент в BST? Наибольший?
-
-Наименьший: идти от корня по левым потомкам до упора (while node->left != nullptr).
-
-Наибольший: идти от корня по правым потомкам до упора (while node->right != nullptr).
-
-Сложность — O(h).
-
-9. Как вычислить высоту бинарного дерева рекурсивно?
+Фактор баланса (balance factor) — разность высот левого и правого поддеревьев узла:
 
 cpp
-int height(Node* node) {
-    if (node == nullptr) return 0;
-    return 1 + max(height(node->left), height(node->right));
+int balanceFactor(Node* node) {
+    return height(node->left) - height(node->right);
 }
-Высота пустого дерева = 0, иначе 1 + максимум из высот поддеревьев. Сложность O(n).
+Значение	Состояние	Действие
+−1, 0, 1	Сбалансирован	Ничего
+> 1	Левое поддерево выше	Правый поворот
+< −1	Правое поддерево выше	Левый поворот
+4. Какие существуют типы поворотов в AVL-дереве?
 
-10. Что такое наименьший общий предок (LCA) двух узлов в дереве?
+Четыре типа:
 
-LCA — это самый нижний (глубокий) узел, который является предком одновременно для обоих заданных узлов. В BST его можно найти за O(h): если оба ключа меньше текущего — идём влево, если оба больше — вправо, иначе текущий узел и есть LCA.
+Правый поворот (Right Rotation) — LL-случай
 
-11. Как проверить, является ли бинарное дерево BST?
+Левый поворот (Left Rotation) — RR-случай
 
-Два способа:
+Левый-правый поворот (Left-Right) — LR-случай
 
-Через in-order обход: последовательность должна быть строго возрастающей.
+Правый-левый поворот (Right-Left) — RL-случай
 
-Рекурсивно с границами: для каждого узла проверяем, что его ключ находится в допустимом диапазоне (min, max), передавая границы вниз по дереву.
+5. Когда применяется правый поворот? Левый поворот?
+
+Правый поворот: фактор баланса узла > 1 (левое поддерево выше) и фактор баланса левого потомка ≥ 0 (LL-случай).
+
+Левый поворот: фактор баланса узла < −1 (правое поддерево выше) и фактор баланса правого потомка ≤ 0 (RR-случай).
+
+6. Когда применяется левый-правый поворот? Правый-левый?
+
+Левый-правый (LR): фактор баланса > 1 и фактор баланса левого потомка < 0. Сначала левый поворот для левого потомка, затем правый для узла.
+
+Правый-левый (RL): фактор баланса < −1 и фактор баланса правого потомка > 0. Сначала правый поворот для правого потомка, затем левый для узла.
+
+7. Какова сложность операций в AVL-дереве?
+
+Поиск, вставка, удаление — O(log n) в среднем и худшем случае. Это гарантируется тем, что высота AVL-дерева всегда O(log n).
+
+8. Почему AVL-дерево называется самобалансирующимся?
+
+Потому что после каждой вставки или удаления дерево автоматически проверяет факторы баланса и выполняет повороты, восстанавливая условие |BF| ≤ 1. Программисту не нужно балансировать вручную.
+
+9. Как часто происходит балансировка при вставке?
+
+Балансировка выполняется только при необходимости — когда после вставки фактор баланса какого-то узла выходит за пределы [−1, 1]. В среднем это происходит нечасто: один поворот (одинарный или двойной) исправляет дисбаланс. В худшем случае — O(log n) проверок на пути от корня к вставленному узлу, но поворотов — не более одного.
+
+10. Чем AVL-дерево отличается от красно-чёрного дерева?
+
+Критерий	AVL	Красно-чёрное
+Баланс	Строгий (|BF| ≤ 1)	Ослабленный (высота ≤ 2log(n+1))
+Высота	Ниже (быстрее поиск)	Выше
+Вставка/удаление	Больше поворотов	Меньше поворотов (быстрее модификация)
+Применение	Частый поиск	Частые вставки/удаления (std::map)
+11. В каких случаях AVL-дерево эффективнее BST?
+
+AVL эффективнее BST, когда:
+
+Данные вставляются в отсортированном порядке (BST вырождается, AVL — нет)
+
+Нужны гарантированные O(log n) операции
+
+Преобладают операции поиска над вставкой/удалением
+
+Префиксное дерево (Trie)
+12/13. Что такое Trie? Для решения каких задач используется?
+
+Trie (префиксное дерево) — структура данных для хранения строк, где каждый узел соответствует символу, а путь от корня до узла образует префикс.
+
+Применение:
+
+Автодополнение (подсказки при вводе)
+
+Поиск по префиксу
+
+Проверка орфографии
+
+IP-маршрутизация (двоичный Trie)
+
+Хранение словарей
+
+14. Какова сложность поиска в Trie? От чего она зависит?
+
+Сложность — O(L), где L — длина строки (ключа). Она не зависит от количества хранимых слов n. Поиск всегда пропорционален длине искомой строки.
+
+15. Какая структура данных эффективнее для строк: Trie или хеш-таблица?
+
+Критерий	Trie	Хеш-таблица
+Точный поиск	O(L)	O(L) в среднем, O(n) в худшем
+Поиск по префиксу	O(L)	O(n) — перебор всех
+Автодополнение	Легко	Сложно
+Память	Больше	Меньше
+Упорядоченность	Есть	Нет
+Вывод: Trie эффективнее для префиксных операций и автодополнения; хеш-таблица — для точного поиска при ограниченной памяти.
+
+16. Как реализовать автодополнение с помощью Trie?
+
+Найти узел, соответствующий введённому префиксу (спуск по Trie)
+
+Запустить DFS от этого узла, собирая все слова (пути до узлов с isEndOfWord == true)
+
+Вернуть найденные слова (можно ограничить топ-5/топ-10)
 
 cpp
-bool isBST(Node* node, long minV = LONG_MIN, long maxV = LONG_MAX) {
-    if (!node) return true;
-    if (node->data <= minV || node->data >= maxV) return false;
-    return isBST(node->left, minV, node->data) &&
-           isBST(node->right, node->data, maxV);
+void collectWords(Node* node, string current, vector<string>& result) {
+    if (node->isEndOfWord) result.push_back(current);
+    for (int i = 0; i < 26; i++)
+        if (node->children[i])
+            collectWords(node->children[i], current + char('a' + i), result);
 }
-12. Что такое сбалансированное дерево? Почему это важно для производительности?
+Сложность: O(L + K), где L — длина префикса, K — суммарная длина найденных слов.
 
-Сбалансированное дерево — дерево, в котором разница высот левого и правого поддеревьев для каждого узла не превышает 1 (AVL-условие) или высота ограничена O(log n). Это важно, потому что гарантирует высоту O(log n), а значит операции поиска/вставки/удаления выполняются за O(log n), а не деградируют до O(n).
+17. Каковы недостатки Trie? Какой объём памяти он требует?
 
-13. Как преобразовать несбалансированное BST в сбалансированное?
+Недостатки:
 
-Выполнить in-order обход и сохранить элементы в отсортированный массив/вектор.
+Большой расход памяти: каждый узел хранит массив из 26 указателей (для английского алфавита) — даже если большинство пусты
 
-Рекурсивно построить новое дерево: средний элемент массива становится корнем, левая половина — левым поддеревом, правая — правым.
+Разреженность: большинство указателей — nullptr
 
-cpp
-Node* buildBalanced(vector<int>& v, int l, int r) {
-    if (l > r) return nullptr;
-    int mid = (l + r) / 2;
-    Node* root = new Node(v[mid]);
-    root->left  = buildBalanced(v, l, mid - 1);
-    root->right = buildBalanced(v, mid + 1, r);
-    return root;
-}
-14. Как восстановить дерево по массиву обхода (in-order + pre-order)?
+Зависимость от алфавита: для Unicode (кириллица, иероглифы) массив детей становится огромным
 
-Первый элемент pre-order — корень.
-
-Находим этот элемент в in-order — всё слева от него принадлежит левому поддереву, всё справа — правому.
-
-Рекурсивно повторяем для левой и правой частей, последовательно беря элементы из pre-order.
-
-cpp
-Node* build(vector<int>& pre, vector<int>& ino, int& idx, int l, int r) {
-    if (l > r) return nullptr;
-    int val = pre[idx++];
-    Node* root = new Node(val);
-    int pos = find(ino.begin() + l, ino.begin() + r + 1, val) - ino.begin();
-    root->left  = build(pre, ino, idx, l, pos - 1);
-    root->right = build(pre, ino, idx, pos + 1, r);
-    return root;
-}
-15. Как реализовать итеративный (не рекурсивный) обход бинарного дерева?
-
-Используется стек (для pre/in/post-order) или очередь (для level-order).
-
-Итеративный in-order (через стек):
-
-cpp
-void inOrderIterative(Node* root) {
-    stack<Node*> st;
-    Node* cur = root;
-    while (cur || !st.empty()) {
-        while (cur) { st.push(cur); cur = cur->left; }
-        cur = st.top(); st.pop();
-        cout << cur->data << " ";
-        cur = cur->right;
-    }
-}
-Итеративный pre-order:
-
-cpp
-void preOrderIterative(Node* root) {
-    if (!root) return;
-    stack<Node*> st;
-    st.push(root);
-    while (!st.empty()) {
-        Node* cur = st.top(); st.pop();
-        cout << cur->data << " ";
-        if (cur->right) st.push(cur->right); // сначала правый
-        if (cur->left)  st.push(cur->left);  // потом левый
-    }
+Объём памяти: ≈ O(26 × L × n) в худшем случае, где n — число слов, L — средняя длина.
